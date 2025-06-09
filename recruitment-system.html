@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Reclutamiento - Grupo Norte</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-custom { background-color: #002338; }
+        .text-custom { color: #77c25c; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const RecruitmentInterface = () => {
+          const [searchName, setSearchName] = useState('');
+          const [searchRUT, setSearchRUT] = useState('');
+          const [searchResults, setSearchResults] = useState([]);
+          const [selectedCandidate, setSelectedCandidate] = useState(null);
+          const [showModal, setShowModal] = useState(false);
+          const [excelData, setExcelData] = useState([]);
+          const [showForm, setShowForm] = useState(false);
+          const [isLoading, setIsLoading] = useState(false);
+
+          const mockCandidates = [
+            {
+              id: 1,
+              nombre: "Juan Carlos Pérez",
+              rut: "12.345.678-9",
+              fechaPostulacion: "2024-05-15",
+              cargo: "Operador de Producción",
+              estadoCivil: "Soltero",
+              fechaNacimiento: "1990-03-15",
+              edad: 34,
+              nacionalidad: "Chilena",
+              visa: "No aplica",
+              cargas: 2,
+              direccion: "Av. Principal 123",
+              poblacion: "Villa Norte",
+              comuna: "Santiago",
+              ciudad: "Santiago",
+              telefono: "+56912345678",
+              email: "juan.perez@email.com",
+              experiencia: "Sí",
+              discapacidad: "No",
+              credenciales: "No",
+              curso05: "No",
+              turno: "Día"
+            },
+            {
+              id: 2,
+              nombre: "María Elena González",
+              rut: "98.765.432-1",
+              fechaPostulacion: "2024-05-20",
+              cargo: "Supervisora de Calidad",
+              estadoCivil: "Casada",
+              fechaNacimiento: "1985-07-22",
+              edad: 39,
+              nacionalidad: "Chilena",
+              visa: "No aplica",
+              cargas: 1,
+              direccion: "Calle Sur 456",
+              poblacion: "Los Pinos",
+              comuna: "Providencia",
+              ciudad: "Santiago",
+              telefono: "+56987654321",
+              email: "maria.gonzalez@email.com",
+              experiencia: "Sí",
+              discapacidad: "No",
+              credenciales: "Sí",
+              curso05: "Sí",
+              turno: "Noche"
+            }
+          ];
+
+          const handleSearch = () => {
+            setIsLoading(true);
+            
+            setTimeout(() => {
+              const results = mockCandidates.filter(candidate => {
+                const nameMatch = searchName ? candidate.nombre.toLowerCase().includes(searchName.toLowerCase()) : true;
+                const rutMatch = searchRUT ? candidate.rut.includes(searchRUT.replace(/\./g, '').replace(/-/g, '')) : true;
+                return (searchName && nameMatch) || (searchRUT && rutMatch);
+              });
+              
+              setSearchResults(results);
+              setIsLoading(false);
+            }, 1000);
+          };
+
+          const handleCandidateSelect = (candidate) => {
+            setSelectedCandidate(candidate);
+            setShowModal(true);
+          };
+
+          const handleRecruitmentDecision = (wasRecruited, reason = '') => {
+            const newRecord = {
+              nombre: selectedCandidate.nombre,
+              rut: selectedCandidate.rut,
+              fechaPostulacion: selectedCandidate.fechaPostulacion,
+              reclutado: wasRecruited ? 'Sí' : 'No',
+              motivo: wasRecruited ? '' : reason,
+              fechaRegistro: new Date().toLocaleDateString('es-CL')
+            };
+
+            setExcelData(prev => [...prev, newRecord]);
+            setShowModal(false);
+
+            if (wasRecruited) {
+              setShowForm(true);
+            } else {
+              setSelectedCandidate(null);
+            }
+          };
+
+          const downloadExcel = () => {
+            const csvContent = [
+              ['Nombre del Colaborador', 'RUT', 'Fecha de Postulación', '¿Reclutado?', 'Motivo (si no)', 'Fecha de Registro'],
+              ...excelData.map(record => [
+                record.nombre,
+                record.rut,
+                record.fechaPostulacion,
+                record.reclutado,
+                record.motivo,
+                record.fechaRegistro
+              ])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'registro_reclutamiento.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+
+          return (
+            <div className="bg-custom text-custom min-h-screen p-6">
+              <div className="max-w-6xl mx-auto">
+                
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold mb-2">Sistema de Gestión de Reclutamiento</h1>
+                  <h2 className="text-xl">GRUPO NORTE</h2>
+                </div>
+
+                {/* Search Section */}
+                <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
+                  <h3 className="text-xl font-semibold mb-4">
+                    🔍 Búsqueda de Colaboradores
+                  </h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Nombre y Apellido</label>
+                      <input
+                        type="text"
+                        value={searchName}
+                        onChange={(e) => setSearchName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white bg-opacity-20 border border-green-500 rounded-md text-white placeholder-green-300"
+                        placeholder="Ingrese nombre y apellido"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">RUT</label>
+                      <input
+                        type="text"
+                        value={searchRUT}
+                        onChange={(e) => setSearchRUT(e.target.value)}
+                        className="w-full px-3 py-2 bg-white bg-opacity-20 border border-green-500 rounded-md text-white placeholder-green-300"
+                        placeholder="Ingrese RUT (ej: 12.345.678-9)"
+                      />
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleSearch}
+                    disabled={isLoading || (!searchName && !searchRUT)}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-6 py-2 rounded-md font-medium transition-colors"
+                  >
+                    {isLoading ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-semibold mb-4">Resultados de Búsqueda</h3>
+                    <div className="space-y-3">
+                      {searchResults.map((candidate) => (
+                        <div key={candidate.id} className="bg-white bg-opacity-10 rounded-lg p-4 flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold flex items-center">
+                              👤 {candidate.nombre}
+                            </div>
+                            <div className="text-sm opacity-80">RUT: {candidate.rut}</div>
+                            <div className="text-sm opacity-80">Cargo: {candidate.cargo}</div>
+                            <div className="text-sm opacity-80">Fecha de Postulación: {candidate.fechaPostulacion}</div>
+                          </div>
+                          <button
+                            onClick={() => handleCandidateSelect(candidate)}
+                            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md transition-colors"
+                          >
+                            Revisar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Excel Records */}
+                {excelData.length > 0 && (
+                  <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-semibold">Registro de Gestiones</h3>
+                      <button
+                        onClick={downloadExcel}
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md flex items-center transition-colors"
+                      >
+                        📥 Descargar Excel
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-green-500">
+                            <th className="text-left p-2">Nombre</th>
+                            <th className="text-left p-2">RUT</th>
+                            <th className="text-left p-2">Fecha Postulación</th>
+                            <th className="text-left p-2">¿Reclutado?</th>
+                            <th className="text-left p-2">Motivo</th>
+                            <th className="text-left p-2">Fecha Registro</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {excelData.map((record, index) => (
+                            <tr key={index} className="border-b border-green-500 border-opacity-30">
+                              <td className="p-2">{record.nombre}</td>
+                              <td className="p-2">{record.rut}</td>
+                              <td className="p-2">{record.fechaPostulacion}</td>
+                              <td className="p-2">
+                                {record.reclutado === 'Sí' ? '✅' : '❌'} {record.reclutado}
+                              </td>
+                              <td className="p-2">{record.motivo}</td>
+                              <td className="p-2">{record.fechaRegistro}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Modal for recruitment decision */}
+                {showModal && selectedCandidate && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white text-black rounded-lg p-6 max-w-md w-full mx-4">
+                      <h3 className="text-lg font-semibold mb-4">Proceso de Reclutamiento</h3>
+                      <p className="mb-6">
+                        ¿El colaborador <strong>{selectedCandidate.nombre}</strong> pasó los procesos de reclutamiento?
+                      </p>
+                      <div className="flex space-x-4">
+                        <button
+                          onClick={() => handleRecruitmentDecision(true)}
+                          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          Sí
+                        </button>
+                        <button
+                          onClick={() => {
+                            const reason = prompt('Ingrese el motivo por el cual no fue reclutado:');
+                            if (reason !== null) {
+                              handleRecruitmentDecision(false, reason);
+                            }
+                          }}
+                          className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
+                        >
+                          No
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        className="w-full mt-4 bg-gray-300 text-black py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Display */}
+                {showForm && selectedCandidate && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-90vh overflow-y-auto">
+                      <div className="p-4 border-b flex justify-between items-center">
+                        <h3 className="text-lg font-semibold text-black flex items-center">
+                          📄 Formulario de Postulación - {selectedCandidate.nombre}
+                        </h3>
+                        <button
+                          onClick={() => {
+                            setShowForm(false);
+                            setSelectedCandidate(null);
+                          }}
+                          className="text-black hover:text-red-600 text-xl font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      {/* Simplified Form */}
+                      <div className="bg-white text-black p-6">
+                        <div className="border-2 border-black">
+                          {/* Header */}
+                          <div className="flex items-center border-b-2 border-black">
+                            <div className="p-4 border-r-2 border-black">
+                              <div className="font-bold text-lg">GRUPO NORTE</div>
+                            </div>
+                            <div className="flex-1 text-center p-4">
+                              <div className="font-bold">FICHA DE POSTULACIÓN E INGRESO</div>
+                              <div className="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
+                            </div>
+                            <div className="p-4 border-l-2 border-black text-sm">
+                              <div>FE-08</div>
+                              <div>Versión: 04</div>
+                              <div>Fecha: 15-05-2025</div>
+                            </div>
+                          </div>
+
+                          {/* Form Content */}
+                          <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <label className="font-bold">Fecha de Postulación:</label>
+                                <span className="ml-2 border-b border-black inline-block w-32">{selectedCandidate.fechaPostulacion}</span>
+                              </div>
+                              <div>
+                                <label className="font-bold">Cargo:</label>
+                                <span className="ml-2 border-b border-black inline-block w-40">{selectedCandidate.cargo}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                <label className="font-bold">NOMBRE COMPLETO:</label>
+                                <span className="ml-2 border-b border-black inline-block w-64">{selectedCandidate.nombre}</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <label className="font-bold">RUT:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-24">{selectedCandidate.rut}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">Estado Civil:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-20">{selectedCandidate.estadoCivil}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">Fecha de Nacimiento:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-24">{selectedCandidate.fechaNacimiento}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-4 gap-4">
+                                <div>
+                                  <label className="font-bold">Edad:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-12">{selectedCandidate.edad}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">Nacionalidad:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-20">{selectedCandidate.nacionalidad}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">Visa:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-20">{selectedCandidate.visa}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">N° Cargas Familiares:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-12">{selectedCandidate.cargas}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="font-bold">Dirección:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-48">{selectedCandidate.direccion}</span>
+                                </div>
+                                <div>
+                                  <label className="font-bold">Teléfono:</label>
+                                  <span className="ml-2 border-b border-black inline-block w-32">{selectedCandidate.telefono}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="font-bold">Email:</label>
+                                <span className="ml-2 border-b border-black inline-block w-48">{selectedCandidate.email}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Connection Status */}
+                <div className="bg-white bg-opacity-10 rounded-lg p-4 text-center">
+                  <p className="text-sm opacity-80">
+                    Sistema conectado al repositorio de formularios de reclutamiento
+                  </p>
+                  <p className="text-xs opacity-60 mt-1">
+                    Formulario: forms.office.com | Usuario: reclutamiento@gruponorte.cl
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<RecruitmentInterface />);
+    </script>
+</body>
+</html>
